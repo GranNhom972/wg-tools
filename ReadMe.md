@@ -22,6 +22,7 @@ sudo apt install wireguard-tools qrencode -y
 ## 💻 Utilisation
 
 ```sh
+sudo wg-init
 sudo wg-add <nom>
 sudo wg-remove <nom>
 sudo wg-list
