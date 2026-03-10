@@ -36,6 +36,7 @@ Un script Python pour automatiser l'ajout de clients (Peers) à un serveur WireG
 ## 💻 Utilisation
 
 ```sh
+wg-quick up wg0
 sudo wg-init
 sudo wg-add <nom>
 sudo wg-remove <nom>
