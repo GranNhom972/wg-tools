@@ -24,13 +24,14 @@ Un script Python pour automatiser l'ajout de clients (Peers) à un serveur WireG
       net.ipv4.ip_forward=1
       net.ipv6.conf.all.forwarding=1
       ```
+   `sudo sysctl -p` 
    - Methode 2
       Editer `nano /etc/sysctl.d/wireguard.conf`
      ```sh
      net.ipv4.ip_forward=1
      net.ipv6.conf.all.forwarding=1
      ```
-   `sudo sysctl -p` 
+   `sudo sysctl -p /etc/sysctl.d/wireguard.conf` 
 
 ## 💻 Utilisation
 
