@@ -41,6 +41,7 @@ wg-quick up wg0
 sudo wg-add <nom>
 sudo wg-remove <nom>
 sudo wg-list
+qrencode -t ansiutf8 xxx.conf
 ```
 ## Fonctionnalités
 - ✅ Génération automatique des clés (Privée/Publique/PSK).
