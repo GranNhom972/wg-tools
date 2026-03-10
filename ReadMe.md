@@ -18,6 +18,12 @@ Un script Python pour automatiser l'ajout de clients (Peers) à un serveur WireG
 sudo apt update
 sudo apt install wireguard-tools qrencode -y
 ```
+Editer /etc/sysctl.conf
+```sh
+net.ipv4.ip_forward=1
+net.ipv6.conf.all.forwarding=1
+
+```
 
 ## 💻 Utilisation
 
