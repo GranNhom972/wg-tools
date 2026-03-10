@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+import os
+import sys
+import subprocess
+import shutil
+
+# --- CONFIGURATION ---
+WG_DIR = "/etc/wireguard"
+WG_INTERFACE = "wg0"
+WG_CONFIG = os.path.join(WG_DIR, f"{WG_INTERFACE}.conf")
+CLIENTS_DIR = "./clients_configs" # Le dossier où vous stockez les configs générées
+
+# --- VERIFICATIONS ---
+if os.geteuid() != 0:
+    print("❌ Ce script doit être lancé avec sudo !")
+    sys.exit(1)
+
+if len(sys.argv) < 2:
+    print(f"Usage: sudo {sys.argv[0]} <nom_client_a_supprimer>")
+    sys.exit(1)
+
+client_to_remove = sys.argv[1]
+marker_start = f"### Client: {client_to_remove}"
+
+if not os.path.exists(WG_CONFIG):
+    print(f"❌ Erreur : {WG_CONFIG} n'existe pas.")
+    sys.exit(1)
+
+# --- LECTURE ET FILTRAGE DU FICHIER CONFIG ---
+print(f"🔍 Recherche du client '{client_to_remove}' dans la configuration...")
+
+with open(WG_CONFIG, "r") as f:
+    lines = f.readlines()
+
+new_lines = []
+found = False
+is_skipping = False
+
+for line in lines:
+    stripped = line.strip()
+    
+    # Si on trouve le début du bloc du client
+    if stripped == marker_start:
+        found = True
+        is_skipping = True
+        print(f"   -> Bloc trouvé, marquage pour suppression.")
+        continue # On ne garde pas cette ligne
+    
+    # Si on est en train de supprimer, on vérifie si on est arrivé au client suivant
+    if is_skipping:
+        # Si on tombe sur un nouveau commentaire "### Client:", on arrête de supprimer
+        if stripped.startswith("### Client:"):
+            is_skipping = False
+            new_lines.append(line) # On garde cette ligne car c'est le début du suivant
+        # Sinon, on continue de sauter les lignes (c'est le contenu du Peer à supprimer)
+        continue
+
+    # Si on n'est pas en train de supprimer, on garde la ligne
+    new_lines.append(line)
+
+if not found:
+    print(f"⚠️  Client '{client_to_remove}' introuvable dans {WG_CONFIG}.")
+    print("   Vérifiez le nom exact (sensible aux majuscules/minuscules).")
+    sys.exit(1)
+
+# --- ECRITURE DU FICHIER MODIFIÉ ---
+# On fait un backup par sécurité avant d'écraser
+shutil.copy(WG_CONFIG, f"{WG_CONFIG}.bak")
+
+with open(WG_CONFIG, "w") as f:
+    f.writelines(new_lines)
+
+print("✅ Fichier wg0.conf mis à jour (Sauvegarde créée : wg0.conf.bak)")
+
+# --- NETTOYAGE DES FICHIERS CLIENTS ---
+# 1. Suppression du dossier de clés
+client_key_path = os.path.join(CLIENTS_DIR, client_to_remove)
+if os.path.exists(client_key_path):
+    try:
+        shutil.rmtree(client_key_path)
+        print(f"🗑️  Dossier de clés supprimé : {client_key_path}")
+    except Exception as e:
+        print(f"⚠️  Erreur suppression dossier: {e}")
+
+# 2. Suppression du fichier .conf local s'il traîne
+local_conf = f"{client_to_remove}.conf"
+if os.path.exists(local_conf):
+    os.remove(local_conf)
+    print(f"🗑️  Fichier {local_conf} supprimé.")
+
+# --- RECHARGEMENT ---
+print("🔄 Rechargement de WireGuard...")
+try:
+    subprocess.run(["systemctl", "reload", f"wg-quick@{WG_INTERFACE}"], check=True)
+    print("✅ Service rechargé avec succès. Client déconnecté.")
+except:
+    subprocess.run(f"wg syncconf {WG_INTERFACE} <(wg-quick strip {WG_INTERFACE})", shell=True, executable="/bin/bash")
+
+print("\nTerminé.")
